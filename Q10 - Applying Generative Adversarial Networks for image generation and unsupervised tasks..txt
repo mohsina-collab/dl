@@ -1,0 +1,101 @@
+Q10 - Applying Generative Adversarial Networks for image generation and unsupervised tasks.
+
+
+
+
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow.keras.layers import Dense, Flatten, Reshape, Conv2D, Conv2DTranspose, LeakyReLU, BatchNormalization
+from tensorflow.keras.models import Sequential
+
+
+
+(X_train, _), (_, _) = tf.keras.datasets.mnist.load_data()
+X_train = (X_train.astype('float32') - 127.5) / 127.5 # Normalize to [-1, 1]
+X_train = np.expand_dims (X_train, axis=-1) # (60000, 28, 28, 1)
+
+
+
+def build_generator():
+    model = Sequential([
+        Dense(7*7*256, use_bias=False, input_shape=(100,)),
+        BatchNormalization(),
+        LeakyReLU(),
+        Reshape((7, 7, 256)),
+
+        Conv2DTranspose(128, (5, 5), strides=(1, 1), padding='same', use_bias=False),
+        BatchNormalization(),
+        LeakyReLU(),
+
+        Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False),
+        BatchNormalization(),
+        LeakyReLU(),
+
+        Conv2DTranspose(1, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh')
+    ])
+    return model
+
+
+
+
+def build_discriminator():
+    model = Sequential([
+        Conv2D(64, (5, 5), strides=(2, 2), padding='same',
+               input_shape=[28, 28, 1]),
+        LeakyReLU(),
+        tf.keras.layers.Dropout(0.3),
+
+        Conv2D(128, (5, 5), strides=(2, 2), padding='same'),
+        LeakyReLU(),
+        tf.keras.layers.Dropout(0.3),
+
+        Flatten(),
+        Dense(1)
+    ])
+    return model
+
+
+
+
+cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+
+# Loss functions
+def discriminator_loss(real_output, fake_output):
+    real_loss = cross_entropy(tf.ones_like(real_output), real_output)
+    fake_loss = cross_entropy(tf.zeros_like(fake_output), fake_output)
+    return real_loss + fake_loss
+
+def generator_loss(fake_output):
+    return cross_entropy(tf.ones_like(fake_output), fake_output)
+
+# Models and optimizers
+generator = build_generator()
+discriminator = build_discriminator()
+generator_optimizer = tf.keras.optimizers.Adam(1e-4)
+discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
+
+@tf.function
+def train_step(images):
+    noise = tf.random.normal([batch_size, 100])
+
+    with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+        generated_images = generator(noise, training=True)
+
+        real_output = discriminator(images, training=True)
+        fake_output = discriminator(generated_images, training=True)
+
+        gen_loss = generator_loss(fake_output)
+        disc_loss = discriminator_loss(real_output, fake_output)
+
+    gradients_of_generator = gen_tape.gradient(gen_loss, generator.trainable_variables)
+    gradients_of_discriminator = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
+
+    generator_optimizer.apply_gradients(zip(gradients_of_generator, generator.trainable_variables))
+    discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator, discriminator.trainable_variables))
+
+
+    
+    train(train_dataset, epochs=10)

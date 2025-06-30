@@ -1,0 +1,99 @@
+Q6  - Applying the Autoencoder algorithms for encoding real-world data
+
+
+
+
+
+
+from sklearn.datasets import load_wine
+import pandas as pd
+import torch
+from torch.utils.data import DataLoader, TensorDataset
+from sklearn.preprocessing import StandardScaler
+
+# Load dataset
+data = load_wine()
+df = pd.DataFrame(data.data, columns=data.feature_names)
+
+# Normalize data
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(df)
+
+# Convert to PyTorch Tensor
+X_tensor = torch.tensor(X_scaled, dtype=torch.float32)
+
+# DataLoader
+dataset = TensorDataset(X_tensor, X_tensor)
+loader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+
+
+
+
+import torch.nn as nn
+
+class Autoencoder(nn.Module):
+    def __init__(self, input_dim, encoding_dim):
+        super(Autoencoder, self).__init__()
+        self.encoder = nn.Sequential(
+            nn.Linear(input_dim, 16),
+            nn.ReLU(),
+            nn.Linear(16, encoding_dim),
+        )
+        self.decoder = nn.Sequential(
+            nn.Linear(encoding_dim, 16),
+            nn.ReLU(),
+            nn.Linear(16, input_dim),
+        )
+
+    def forward(self, x):
+        encoded = self.encoder(x)
+        decoded = self.decoder(encoded)
+        return decoded
+
+
+
+
+
+input_dim = X_tensor.shape[1]
+encoding_dim = 3  # dimensionality of latent space
+
+model = Autoencoder(input_dim, encoding_dim)
+criterion = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+
+# Training loop
+for epoch in range(50):
+    total_loss = 0
+    for batch_X, _ in loader:
+        output = model(batch_X)
+        loss = criterion(output, batch_X)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        total_loss += loss.item()
+
+    if (epoch+1) % 10 == 0:
+        print(f"Epoch {epoch+1}, Loss: {total_loss:.4f}")
+
+
+
+
+
+
+import matplotlib.pyplot as plt
+
+model.eval()
+with torch.no_grad():
+    encoded_data = model.encoder(X_tensor).numpy()
+
+# Plot 2D projection
+plt.figure(figsize=(8, 6))
+plt.scatter(encoded_data[:, 0], encoded_data[:, 1], c=data.target, cmap='tab10')
+plt.title("2D Encoded Representation (Autoencoder)")
+plt.xlabel("Feature 1")
+plt.ylabel("Feature 2")
+plt.colorbar(label="Class")
+plt.show()

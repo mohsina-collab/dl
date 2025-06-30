@@ -1,0 +1,72 @@
+Q3 (B) - CNN
+
+deep feed-forward network with two hidden layers for performing multiclass classification
+
+
+
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+
+np.random.seed(42)
+X = np.array([
+    [5.1, 3.5, 1.4, 0.2], [4.9, 3.0, 1.4, 0.2], [4.7, 3.2, 1.3, 0.2], [4.6, 3.1, 1.5, 0.2],
+    [5.0, 3.6, 1.4, 0.2], [5.4, 3.9, 1.7, 0.4], [4.6, 3.4, 1.4, 0.3], [6.9, 3.1, 4.9, 1.5],
+    [5.5, 2.3, 4.0, 1.3], [6.5, 2.8, 4.6, 1.5], [6.3, 3.3, 6.0, 2.5], [5.8, 2.7, 5.1, 1.9],
+    [7.5, 3.2, 6.8, 2.4], [6.5, 3.0, 5.8, 2.2]
+], dtype=np.float32)
+
+y = np.array([0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2], dtype=np.int32)
+y = tf.keras.utils.to_categorical(y)
+
+np.random.shuffle(np.c_[X, y])
+X_train = X[:12]
+y_train = y[:12]
+X_test = X[12:]
+y_test = y[12:]
+
+X_mean = np.mean(X_train, axis=0)
+X_std = np.std(X_train, axis=0)
+X_train = (X_train - X_mean) / X_std
+X_test = (X_test - X_mean) / X_std
+
+model = tf.keras.Sequential([
+    tf.keras.layers.Input(shape=(4,)),
+    tf.keras.layers.Dense(16, activation='relu'),
+    tf.keras.layers.Dense(8, activation='relu'),
+    tf.keras.layers.Dense(3, activation='softmax')
+])
+
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+history = model.fit(X_train, y_train, epochs=50, validation_data=(X_test, y_test), verbose=0)
+
+plt.figure(figsize=(12, 5))
+plt.subplot(1, 2, 1)
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Loss over Epochs')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Accuracy over Epochs')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+
+plt.tight_layout()
+plt.savefig("multiclass_classification_plot.png")
+
+predictions = model.predict(X_test)
+predicted_classes = np.argmax(predictions, axis=1)
+actual_classes = np.argmax(y_test, axis=1)
+
+print("Multiclass Classification Predictions:")
+for i in range(len(X_test)):
+    print(f"Sample {i+1}: Predicted Class: {predicted_classes[i]}, Actual Class: {actual_classes[i]}")

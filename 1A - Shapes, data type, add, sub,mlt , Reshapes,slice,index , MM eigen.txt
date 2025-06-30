@@ -1,0 +1,47 @@
+Q1 : (A)
+•
+Create tensors with different shapes and data types.
+•
+Perform basic operations like addition, subtraction, multiplication, and division on tensors.
+•
+Reshape, slice, and index tensors to extract specific elements or sections.
+•
+Performing matrix multiplication and finding eigenvectors and eigenvalues using TensorFlow
+
+
+
+
+
+
+import tensorflow as tf
+
+tensorl = tf.constant ([[1, 2], [3, 4]], dtype=tf.float32)
+tensor2 = tf.constant ([[5, 6], [7, 8]], dtype=tf.int32)
+tensor3 = tf.random.uniform((3, 2, 4), dtype=tf.float64)
+
+add_result = tf.add(tensorl, tf.cast (tensor2, tf.float32))
+sub_result = tf.subtract (tensorl, tf.cast(tensor2, tf.float32)) 
+mul_result = tf.multiply(tensorl, tf.cast (tensor2, tf.float32))
+div_result = tf.divide (tensorl, tf.cast(tensor2, tf.float32))
+
+reshaped = tf.reshape (tensor3, (6, 4))
+sliced = tensor3 [:, 0:2, 1:3]
+indexed = tensorl [0, 1]
+
+matmul_result = tf.matmul(tensorl, tf.cast(tensor2, tf.float32))
+
+eigenvalues, eigenvectors = tf.linalg.eigh(tensorl)
+
+print("Tensorl:\n", tensorl)
+print("Tensor2:\n", tensor2)
+print("Tensor3:\n", tensor3)
+print("Addition:\n", add_result)
+print("Subtraction:\n", sub_result)
+print("Multiplication:\n", mul_result)
+print("Division:\n", div_result)
+print("Reshaped:\n", reshaped)
+print("Sliced:\n", sliced)
+print("Indexed:\n", indexed)
+print("Matrix Multiplication:\n", matmul_result)
+print("Eigenvalues: \n", eigenvalues)
+print("Eigenvectors:\n", eigenvectors)

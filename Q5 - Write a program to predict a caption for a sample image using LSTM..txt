@@ -1,0 +1,100 @@
+Q5 - Write a program to predict a caption for a sample image using LSTM.
+
+
+
+
+import torch
+import torch.nn as nn
+import torchvision.models as models
+
+class EncoderCNN(nn.Module):
+    def __init__(self, embed_size):
+        super(EncoderCNN, self).__init__()
+        resnet = models.resnet18(pretrained=True)
+        for param in resnet.parameters():
+            param.requires_grad = False  # Freeze backbone
+        self.resnet = nn.Sequential(*list(resnet.children())[:-1])  # Remove last FC layer
+        self.fc = nn.Linear(resnet.fc.in_features, embed_size)
+        self.bn = nn.BatchNorm1d(embed_size, momentum=0.01)
+
+    def forward(self, images):
+        features = self.resnet(images)
+        if features.dim() == 4:
+            features = features.squeeze(-1).squeeze(-1)  # remove H and W if they are 1
+        elif features.dim() == 2:
+            pass  # already in [batch_size, feature_size] form
+        features = self.bn(self.fc(features))
+        return features
+
+class DecoderRNN(nn.Module):
+    def __init__(self, embed_size, hidden_size, vocab_size, num_layers=1):
+        super(DecoderRNN, self).__init__()
+        self.embed = nn.Embedding(vocab_size, embed_size)
+        self.lstm = nn.LSTM(embed_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, vocab_size)
+
+    def forward(self, features, captions):
+        embeddings = self.embed(captions[:, :-1])  # exclude <end>
+        inputs = torch.cat((features.unsqueeze(1), embeddings), 1)
+        hiddens, _ = self.lstm(inputs)
+        outputs = self.fc(hiddens)
+        return outputs
+
+    def sample(self, features, max_len=20):
+        sampled_ids = []
+        inputs = features.unsqueeze(1)
+        states = None
+        for _ in range(max_len):
+            hiddens, states = self.lstm(inputs, states)
+            outputs = self.fc(hiddens.squeeze(1))
+            _, predicted = outputs.max(1)
+            sampled_ids.append(predicted.item())
+            inputs = self.embed(predicted).unsqueeze(1)
+            if predicted.item() == vocab['<end>']:
+                break
+        return sampled_ids
+
+
+
+
+
+
+
+
+vocab = {'<pad>': 0, '<start>': 1, '<end>': 2, 'a': 3, 'dog': 4, 'on': 5, 'grass': 6}
+inv_vocab = {v: k for k, v in vocab.items()}
+vocab_size = len(vocab)
+
+from PIL import Image
+from torchvision import transforms
+
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+
+def load_image(image_path):
+    image = Image.open(image_path).convert("RGB")
+    image = transform(image).unsqueeze(0)
+    return image
+
+# Initialize
+embed_size = 256
+hidden_size = 512
+encoder = EncoderCNN(embed_size)
+decoder = DecoderRNN(embed_size, hidden_size, vocab_size)
+encoder.eval()
+decoder.eval()
+
+# Load Image
+img_path = "dog.jpg"  # replace with actual image
+image_tensor = load_image(img_path)
+
+# Forward Pass
+with torch.no_grad():
+    feature = encoder(image_tensor)
+    sampled_ids = decoder.sample(feature)
+    caption = [inv_vocab.get(word_id, "") for word_id in sampled_ids]
+    result = ' '.join(caption).replace('<start>', '').replace('<end>', '')
+    print("Predicted Caption:", result)

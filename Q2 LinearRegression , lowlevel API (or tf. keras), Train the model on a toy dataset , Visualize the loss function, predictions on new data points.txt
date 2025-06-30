@@ -1,0 +1,64 @@
+Q2:   
+
+Implement a simple linear regression model using TensorFlow's lowlevel API (or tf. keras).
+•
+Train the model on a toy dataset (e.g., housing prices vs. square footage).
+•
+Visualize the loss function and the learned linear relationship.
+•
+Make predictions on new data points.
+
+
+
+
+
+!pip install tensorflow
+!pip install numpy
+!pip install matplotlib
+
+import tensorflow as tf
+import numpy as np
+import matplotlib.pyplot as plt
+np.random.seed(42)
+X = np.array([500, 750, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750], dtype=np.float32)
+y = np.array([200000, 250000, 300000, 350000, 400000, 450000, 500000, 550000, 600000, 650000], dtype=np.float32)
+
+X = X/np.max(X)
+y = y/np.max(y)
+
+model = tf.keras.Sequential ([
+    tf.keras.layers.Input (shape=(1,)),
+    tf.keras.layers. Dense (1)
+])
+
+
+model.compile(optimizer='adam', loss='mse')
+
+history = model.fit(X, y, epochs=100, verbose=0)
+
+plt.figure(figsize=(12,5))
+plt.subplot(1, 2, 1)
+plt.plot(history.history['loss'])
+plt.title('Loss over Epochs')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+
+plt.subplot(1, 2, 2)
+plt.scatter (X * np.max(X), y * np.max(y), label='Data')
+X_pred = np.linspace (500, 2750, 100)
+y_pred = model.predict(X_pred / np.max (X)) * np.max(y)
+plt.plot(X_pred, y_pred, 'r', label='Learned Line')
+plt.title('Linear Regression')
+plt.xlabel('Square Footage')
+plt.ylabel('Price')
+plt.legend()
+
+plt.tight_layout()
+plt.savefig('linear_regression_plot.png')
+
+X_new = np.array([800, 1200, 1800], dtype=np.float32)
+y_new = model.predict (X_new/np.max(X)) * np.max(y)
+
+print("New Predictions:")
+for i in range (len (X_new)):
+  print (f"Square Footage: {X_new[i]}, Predicted Price: {y_new[i].item():.2f}")
